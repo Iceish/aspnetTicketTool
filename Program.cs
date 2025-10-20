@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Reflection;
 using System.Text;
@@ -80,10 +80,10 @@ namespace FormsTicketTool
 
         private static int HandleEncrypt(string[] args)
         {
-            // encrypt <validationKey> <decryptionKey> <existingEncryptedTicket> <newUsernameOrDashToKeep> <minutes>
-            if (args.Length < 6)
+            // encrypt <validationKey> <decryptionKey> <existingEncryptedTicket> <newUsernameOrDashToKeep> <newUserDataOrDashToKeep> <minutes>
+            if (args.Length < 7)
             {
-                Console.Error.WriteLine("Encrypt usage: encrypt <validationKey> <decryptionKey> <existingEncryptedTicket> <newUsernameOrDashToKeep> <minutes>");
+                Console.Error.WriteLine("Encrypt usage: encrypt <validationKey> <decryptionKey> <existingEncryptedTicket> <newUsernameOrDashToKeep> <newUserDataOrDashToKeep> <minutes>");
                 return 1;
             }
 
@@ -91,9 +91,11 @@ namespace FormsTicketTool
             string decryptionKey = args[2];
             string existingEncryptedTicket = args[3];
             string newUser = args[4];
-            if (!int.TryParse(args[5], out int minutes))
+            string newUserData = args[5];
+
+            if (!int.TryParse(args[6], out int minutes))
             {
-                Console.Error.WriteLine("Invalid minutes: " + args[5]);
+                Console.Error.WriteLine("Invalid minutes: " + args[6]);
                 return 1;
             }
 
@@ -109,7 +111,7 @@ namespace FormsTicketTool
                     Assembly.GetExecutingAssembly().Location,
                     typeof(FormsTicketWorker).FullName);
 
-                string encTicket = worker.ReEncryptTicket(existingEncryptedTicket, newUser, minutes);
+                string encTicket = worker.ReEncryptTicket(existingEncryptedTicket, newUser, newUserData, minutes);
                 Console.WriteLine(worker.DecryptTicket(encTicket));
                 Console.WriteLine(encTicket);
                 return 0;
@@ -131,13 +133,14 @@ namespace FormsTicketTool
             Console.WriteLine("Decrypt:");
             Console.WriteLine("  FormsTicketTool decrypt <validationKey> <decryptionKey> <encryptedTicket>");
             Console.WriteLine();
-            Console.WriteLine("Encrypt (from existing ticket, optionally change username and expiry minutes):");
-            Console.WriteLine("  FormsTicketTool encrypt <validationKey> <decryptionKey> <existingEncryptedTicket> <newUsernameOrDashToKeep> <minutes>");
+            Console.WriteLine("Encrypt (from existing ticket; use '-' to keep a field unchanged):");
+            Console.WriteLine("  FormsTicketTool encrypt <validationKey> <decryptionKey> <existingEncryptedTicket> <newUsernameOrDashToKeep> <newUserDataOrDashToKeep> <minutes>");
             Console.WriteLine();
             Console.WriteLine("Examples:");
             Console.WriteLine("  FormsTicketTool decrypt EBF9...  B26C...  <encTicket>");
-            Console.WriteLine("  FormsTicketTool encrypt EBF9...  B26C...  <encTicket>  john  120");
-            Console.WriteLine("  FormsTicketTool encrypt EBF9...  B26C...  <encTicket>  -    60   (keep original username)");
+            Console.WriteLine("  FormsTicketTool encrypt EBF9...  B26C...  <encTicket>  john  my-custom-data  120");
+            Console.WriteLine("  FormsTicketTool encrypt EBF9...  B26C...  <encTicket>  -     -               60   (keep original username and userData)");
+            Console.WriteLine("  FormsTicketTool encrypt EBF9...  B26C...  <encTicket>  john  -               60   (change username only)");
         }
 
         private static string WriteTempConfig(string validationKey, string decryptionKey, string validationAlg, string decryptionAlg)
@@ -200,13 +203,14 @@ namespace FormsTicketTool
             return sb.ToString();
         }
 
-        public string ReEncryptTicket(string existingEncryptedTicket, string newUserOrDash, int minutes)
+        public string ReEncryptTicket(string existingEncryptedTicket, string newUserOrDash, string newUserDataOrDash, int minutes)
         {
             var original = FormsAuthentication.Decrypt(existingEncryptedTicket);
             if (original == null)
                 throw new InvalidOperationException("Failed to decrypt existing ticket. Check keys/algorithms.");
 
             string user = newUserOrDash == "-" ? original.Name : newUserOrDash;
+            string userData = newUserDataOrDash == "-" ? original.UserData : newUserDataOrDash;
 
             var newTicket = new FormsAuthenticationTicket(
                 1,
@@ -214,7 +218,7 @@ namespace FormsTicketTool
                 DateTime.Now,
                 DateTime.Now.AddMinutes(minutes),
                 original.IsPersistent,
-                original.UserData,
+                userData,
                 original.CookiePath ?? "/"
             );
 
