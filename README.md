@@ -14,12 +14,13 @@ Here is the vibe documentation, enjoy:
 
 - Encrypt (clone an existing ticket, optionally change username and expiration minutes)
 ```bat
-.\aspnetTicketTool encrypt <validationKey> <decryptionKey> <existingEncryptedTicket> <newUsernameOrDashToKeep> <minutes>
+.\aspnetTicketTool encrypt <validationKey> <decryptionKey> <existingEncryptedTicket> <newUsernameOrDashToKeep> <newUserDataOrDashToKeep> <minutes>
 ```
 
 Notes:
 - Algorithms are fixed to `validation=HMACSHA256` and `decryption=AES` in this tool.
 - `newUsernameOrDashToKeep`: pass `-` to keep the original username.
+- `newUserDataOrDashToKeep`: pass `-` to keep the original username.
 - On success, `encrypt` prints two lines: the human-readable ticket info, then the new encrypted ticket.
 
 ## Examples
@@ -43,12 +44,12 @@ CookiePath: /
 
 - Encrypt (change username and set 120-minute expiry)
 ```bat
-.\aspnetTicketTool encrypt EBF9... B26C... <existingEncTicket> john 120
+.\aspnetTicketTool encrypt EBF9... B26C... <existingEncTicket> john admin 120
 ```
 
 - Encrypt (keep existing username, set 60-minute expiry)
 ```bat
-.\aspnetTicketTool encrypt EBF9... B26C... <existingEncTicket> - 60
+.\aspnetTicketTool encrypt EBF9... B26C... <existingEncTicket> - - 60
 ```
 
 ## How it works (brief)
